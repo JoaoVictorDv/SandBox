@@ -18,6 +18,8 @@ int main() {
 
     bool aberta = true;
     SDL_Event evento;
+    float mouseX = 400;
+    float mouseY = 300;
 
     while (aberta) {
         while (SDL_PollEvent(&evento)) {
@@ -25,18 +27,23 @@ int main() {
                 aberta = false;
             }
             else if (evento.type == SDL_EVENT_MOUSE_MOTION) {
-                float x = evento.motion.x;
-                float y = evento.motion.y;
+                mouseX = evento.motion.x;
+                mouseY = evento.motion.y;
 
                 SDL_SetWindowTitle(
                     window,
-                    ("Mouse: " + std::to_string(x) + ", " + std::to_string(y)).c_str()
+                    ("Mouse: " + std::to_string(mouseX) + ", " + std::to_string(mouseY)).c_str()
                 );
             }
         }
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+
+        SDL_FRect cursor = {mouseX - 5, mouseY - 5, 10, 10};
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderFillRect(renderer, &cursor);
+
         SDL_RenderPresent(renderer);
     }
 
