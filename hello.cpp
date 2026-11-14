@@ -5,6 +5,8 @@
 struct pixel {
     float x;
     float y;
+    float velocidadeY;
+    bool corTerra;
 };
 
 int main() {
@@ -28,7 +30,49 @@ int main() {
     float mouseY = 300;
     std::vector<pixel> cliques;
 
+    constexpr float larguraJanela = 800;
+    constexpr float alturaJanela = 600;
+    constexpr float lado = 8;
+    constexpr float gravidade = 800.0f;
+    Uint64 ultimoTempo = SDL_GetTicks();
+
     while (aberta) {
+        Uint64 agora = SDL_GetTicks();
+        float deltaTempo = (agora - ultimoTempo) / 1000.0f;
+        ultimoTempo = agora;
+
+        for (pixel& clique : cliques) {
+            clique.velocidadeY += gravidade * deltaTempo;
+            float proximoY = clique.y + clique.velocidadeY * deltaTempo;
+            float limiteY = alturaJanela - lado / 2;
+
+            for (const pixel& outro : cliques) {
+                if (&clique == &outro) {
+                    continue;
+                }
+
+                bool sobrepoeNaHorizontal =
+                    clique.x + lado / 2 > outro.x - lado / 2 &&
+                    clique.x - lado / 2 < outro.x + lado / 2;
+                bool estavaAcima = clique.y <= outro.y;
+                bool atingiuOTopoDoOutro = proximoY + lado / 2 >= outro.y - lado / 2;
+
+                if (sobrepoeNaHorizontal && estavaAcima && atingiuOTopoDoOutro) {
+                    float topoParaParar = outro.y - lado;
+                    if (topoParaParar < limiteY) {
+                        limiteY = topoParaParar;
+                    }
+                }
+            }
+
+            if (proximoY > limiteY) {
+                clique.y = limiteY;
+                clique.velocidadeY = 0;
+            } else {
+                clique.y = proximoY;
+            }
+        }
+
         while (SDL_PollEvent(&evento)) {
             if (evento.type == SDL_EVENT_QUIT) {
                 aberta = false;
@@ -44,7 +88,21 @@ int main() {
             }
             else if (evento.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (evento.button.button == SDL_BUTTON_LEFT) {
-                    cliques.push_back({evento.button.x, evento.button.y});
+                    cliques.push_back({evento.button.x, evento.button.y, 0, false});
+                }
+                else if (evento.button.button == SDL_BUTTON_RIGHT) {
+                    for (pixel& clique : cliques) {
+                        bool clicouNoQuadrado =
+                            evento.button.x >= clique.x - lado / 2 &&
+                            evento.button.x <= clique.x + lado / 2 &&
+                            evento.button.y >= clique.y - lado / 2 &&
+                            evento.button.y <= clique.y + lado / 2;
+
+                        if (clicouNoQuadrado) {
+                            clique.corTerra = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -52,10 +110,13 @@ int main() {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        constexpr float lado = 24;
-
         for (const pixel& clique : cliques) {
+            if (clique.corTerra) {
+                SDL_SetRenderDrawColor(renderer, 121, 85, 61, 255);
+            } else {
+                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            }
+
             SDL_FRect quadrado = {
                 clique.x - lado / 2,
                 clique.y - lado / 2,
